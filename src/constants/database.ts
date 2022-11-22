@@ -1,0 +1,1 @@
+export const TEXT_MESSAGE_TRANSCRIPTS = 'TextMessageTranscripts' as const;

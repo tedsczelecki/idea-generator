@@ -1,0 +1,71 @@
+service: idea-generator
+
+plugins:
+  - serverless-plugin-common-excludes
+  - serverless-plugin-include-dependencies
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        Fn::GetAtt:
+          - TextMessageTranscripts
+          - Arn
+    - Effect: Allow
+      Action:
+        - "s3:*"
+      Resource: { "Fn::Join": [ "", [ "arn:aws:s3:::idea-generation-text-message-media", "/*" ] ] }
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!node_modules/**/src/**'
+    - '!src/**'
+    - '!scripts/**'
+    - '!dist/**'
+    - '!layers/**'
+    - '!database/**'
+    - '!schema.prisma'
+    - '!tsconfig.json'
+    - '!tslint.json'
+    - 'prisma/**'
+    - 'node_modules/.prisma/**'
+
+functions:
+  recieve:
+    handler: dist/endpoints/message/receive.handler
+    environment: ${file(env.json)}
+    package:
+      patterns:
+        - 'dist/endpoints/message/receive.js'
+    events:
+      - http:
+          path: /message/recieve
+          method: get
+
+resources:
+  Resources:
+    TextMessageTranscripts:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        TableName: TextMessageTranscripts
